@@ -1,0 +1,28 @@
+version: "3"
+services:
+  caddy-gen:
+    container_name: caddy-gen
+    image: "wemakeservices/caddy-gen:latest"
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro  # for caddy to proxy traffic
+      - ./certs/acme:/etc/caddy/acme  # to save acme
+      - ./certs/ocsp:/etc/caddy/ocsp  # to save certificates
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - suter-node
+
+  suter-node:
+    image: "suterusu/suter-node:latest"
+    command: "suter-node --ws-external --rpc-external --unsafe-ws-external --unsafe-rpc-external --rpc-cors all ${SUTER_CLI_EXTRA_ARGUMENTS:-}"
+    ports:
+      - "127.0.0.1:9933:9933"
+      - "127.0.0.1:9944:9944"
+      - "127.0.0.1:30333:30333"
+    labels:
+      - "virtual.host=${TLS_DOMAIN:-suter-node.example.org}"
+      - "virtual.tls-email=${TLS_EMAIL:-contact@suterusu.io}"
+      - "virtual.port=9944"
+      - "virtual.websockets"
