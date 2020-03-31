@@ -16,13 +16,15 @@ services:
 
   suter-node:
     image: "suterusu/suter-node:latest"
-    command: "suter-node --ws-external --rpc-external --unsafe-ws-external --unsafe-rpc-external --rpc-cors all ${SUTER_CLI_EXTRA_ARGUMENTS:-}"
+    command: "--base-path /data --ws-external --rpc-external --unsafe-ws-external --unsafe-rpc-external --rpc-cors all ${SUTER_NODE_EXTRA_ARGUMENTS:-}"
+    volumes:
+      - /home/ubuntu/.suter/data:/data
     ports:
       - "127.0.0.1:9933:9933"
       - "127.0.0.1:9944:9944"
-      - "127.0.0.1:30333:30333"
+      - "30333:30333"
     labels:
-      - "virtual.host=${TLS_DOMAIN:-suter-node.example.org}"
+      - "virtual.host=${TLS_DOMAIN:-node.cluster.suterusu.io}"
       - "virtual.tls-email=${TLS_EMAIL:-contact@suterusu.io}"
       - "virtual.port=9944"
       - "virtual.websockets"

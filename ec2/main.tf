@@ -56,7 +56,7 @@ provider "aws" {
   version = "~> 2.0"
 }
 
-resource "aws_key_pair" "terraform" {
+resource "aws_key_pair" "suterusu_node" {
   key_name   = var.public_key_name
   public_key = file(pathexpand(var.public_key))
 }
@@ -83,11 +83,12 @@ resource "aws_instance" "suterusu_node" {
   ami             = data.aws_ami.ubuntu.id
   instance_type   = var.instance_type
   security_groups = [aws_security_group.suterusu_node.name]
-  key_name        = aws_key_pair.terraform.key_name
+  key_name        = aws_key_pair.suterusu_node.key_name
   tags = {
     Name = "${var.instance_tag_prefix}-${count.index < length(local.instance_names) ?
     local.instance_names[count.index] : tostring(count.index + 1)}"
   }
+
   provisioner "remote-exec" {
     on_failure = continue
     connection {
@@ -101,13 +102,40 @@ resource "aws_instance" "suterusu_node" {
       "additional_arguments=${count.index < length(local.instance_names) ? local.instance_names[count.index] : ""}",
       "echo 127.0.0.1 $hostname | sudo tee -a /etc/hosts",
       "sudo hostnamectl set-hostname $hostname",
+      "sudo apt update", # Don't know why one update does not work.
       "sudo apt update",
       "sudo apt install -y docker.io docker-compose",
       "sudo systemctl enable docker",
       "sudo systemctl start docker",
       "sudo groupadd docker",
       "sudo usermod -aG docker ubuntu",
+      "mkdir -p /home/ubuntu/.suter/node",
+      "mkdir -p /home/ubuntu/.suter/data",
     ]
+  }
+
+  provisioner "file" {
+    on_failure = continue
+    connection {
+      type        = "ssh"
+      user        = "ubuntu"
+      private_key = file(pathexpand(var.private_key))
+      host        = self.public_ip
+    }
+    source      = "${path.module}/../docker-compose-caddy.yml"
+    destination = "/home/ubuntu/.suter/node/docker-compose.yml"
+  }
+
+  provisioner "file" {
+    on_failure = continue
+    connection {
+      type        = "ssh"
+      user        = "ubuntu"
+      private_key = file(pathexpand(var.private_key))
+      host        = self.public_ip
+    }
+    source      = "${path.module}/../.env"
+    destination = "/home/ubuntu/.suter/node/.env"
   }
 }
 
