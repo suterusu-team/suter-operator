@@ -20,6 +20,12 @@ variable "instance_tag_prefix" {
   description = "tag of the ec2 instance to be created"
 }
 
+variable "instance_names" {
+  type        = list
+  default     =   ["alice", "bob", "charlie", "dave", "eve", "ferdie"]
+  description = "names of the ec2 instances to be created"
+}
+
 variable "instance_type" {
   type        = string
   default     = "t2.micro"
@@ -40,7 +46,7 @@ variable "private_key" {
 
 variable "public_key_name" {
   type        = string
-  default     = "suterusu nodes creator keys"
+  default     = "suterusu nodes creator's key"
   description = "name of the key to be added to aws ec2"
 }
 
@@ -85,8 +91,8 @@ resource "aws_instance" "suterusu_node" {
   security_groups = [aws_security_group.suterusu_node.name]
   key_name        = aws_key_pair.suterusu_node.key_name
   tags = {
-    Name = "${var.instance_tag_prefix}-${count.index < length(local.instance_names) ?
-    local.instance_names[count.index] : tostring(count.index + 1)}"
+    Name = "${var.instance_tag_prefix}-${count.index < length(var.instance_names) ?
+    var.instance_names[count.index] : tostring(count.index + 1)}"
   }
 
   provisioner "remote-exec" {
@@ -98,8 +104,8 @@ resource "aws_instance" "suterusu_node" {
       host        = self.public_ip
     }
     inline = [
-      "hostname=${var.instance_tag_prefix}-${count.index < length(local.instance_names) ? local.instance_names[count.index] : tostring(count.index + 1)}",
-      "additional_arguments=${count.index < length(local.instance_names) ? local.instance_names[count.index] : ""}",
+      "hostname=${var.instance_tag_prefix}-${count.index < length(var.instance_names) ? var.instance_names[count.index] : tostring(count.index + 1)}",
+      "additional_arguments=${count.index < length(var.instance_names) ? var.instance_names[count.index] : ""}",
       "echo 127.0.0.1 $hostname | sudo tee -a /etc/hosts",
       "sudo hostnamectl set-hostname $hostname",
       "sudo apt update", # Don't know why one update does not work.
@@ -122,20 +128,8 @@ resource "aws_instance" "suterusu_node" {
       private_key = file(pathexpand(var.private_key))
       host        = self.public_ip
     }
-    source      = "${path.module}/../docker-compose-caddy.yml"
-    destination = "/home/ubuntu/.suter/node/docker-compose.yml"
-  }
-
-  provisioner "file" {
-    on_failure = continue
-    connection {
-      type        = "ssh"
-      user        = "ubuntu"
-      private_key = file(pathexpand(var.private_key))
-      host        = self.public_ip
-    }
-    source      = "${path.module}/../.env"
-    destination = "/home/ubuntu/.suter/node/.env"
+    source      = "${path.module}/../caddy/"
+    destination = "/home/ubuntu/.suter/node/"
   }
 }
 
@@ -285,7 +279,6 @@ locals {
   tcp_protocol    = "tcp"
   udp_protocol    = "udp"
   all_ips         = ["0.0.0.0/0"]
-  instance_names  = ["alice", "bob", "charlie", "dave", "eve", "ferdie"]
 }
 
 output "instance_ip" {

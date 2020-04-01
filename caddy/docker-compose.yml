@@ -16,6 +16,7 @@ services:
 
   suter-node:
     image: "suterusu/suter-node:latest"
+    restart: always
     command: "--base-path /data --ws-external --rpc-external --unsafe-ws-external --unsafe-rpc-external --rpc-cors all ${SUTER_NODE_EXTRA_ARGUMENTS:-}"
     volumes:
       - /home/ubuntu/.suter/data:/data
